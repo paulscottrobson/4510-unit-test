@@ -34,13 +34,25 @@ Start:
 		ldy 	#BootMsg1 >> 8
 		jsr 	SIOPrintString
 
-		neg
-		neg
-		lda 	#$A1
-		.byte 	$B2,$C3,$D4
+		ldx 	#$80
+_Copy:		
+		lda 	$B000,x
+		sta 	$8000,x
+		sta 	$80,x
+		dex
+		bpl 	_Copy
 
+		neg
+		neg
+		inc 	$8000
+
+		neg
+		neg
+		lda 	$BFF4
+
+		
 		jsr 	CheckStatus
-		.byte 	$A1,$B2,$C3,$D4,$80
+		.byte 	$CC,$DD,$EE,$FF,$FF
 
 		ldx 	#BootMsg2 & 255 			; boot text.
 		ldy 	#BootMsg2 >> 8
@@ -84,11 +96,19 @@ _CheckReg:
 		cpy 	#5
 		bne 	_CheckReg
 		lda 	(pcl),y
+		cmp 	#$FF 				; $FF = ignore status.
+		beq 	_ExitCS
 		eor 	sr
 		and 	#$C3
 		bne 	_CheckReg
 		;
-		nop
+_ExitCS:
+		lda 	pch
+		jsr 	SIOPrintHex
+		lda 	pcl
+		jsr 	SIOPrintHex
+		lda 	#13
+		jsr 	SIOPrintCharacter
 		lda 	pcl
 		clc
 		adc 	#5
@@ -97,7 +117,15 @@ _CheckReg:
 		adc 	#0
 		pha
 		phx
-		rts
+
+		lda 	#0
+		tax
+		tay
+		.if TARGET=1
+		taz
+		.endif
+		clc
+		clv
 		rts
 
 ; *******************************************************************************************

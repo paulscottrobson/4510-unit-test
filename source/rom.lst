@@ -1,7 +1,7 @@
 
 ; 64tass Turbo Assembler Macro V1.54.1900 listing file
 ; 64tass -q --m4510 -D TARGET=1 -b -L rom.lst -o rom.bin unittest.asm
-; Wed Jul 31 14:56:45 2019
+; Wed Jul 31 15:52:33 2019
 
 ;Offset	;Hex		;Monitor	;Source
 
@@ -33,6 +33,9 @@
 =4					EXTZPWork = 4								; Zero Page work for Personality (4 bytes)
 =8					IOCursorX = 8 								; Cursor position
 =9					IOCursorY = 9
+>bff0	cc dd ee ff					.byte 	$CC,$DD,$EE,$FF
+>bff4	00 00 00 00					.byte 	0,0,0,0
+>bff8	ff ff ff ff					.byte 	$FF,$FF,$FF,$FF
 =$20							zeroPage 	= $20 					; first ZP byte to use
 =$2000							startMemory = $2000 				; first non ZP byte to use
 =$8000							endMemory   = $8000 				; last non ZP byte to use
@@ -672,90 +675,112 @@
 .e000	a2 ff		ldx #$ff		ldx 	#$FF 							; reset 6502 stack.
 .e002	9a		txs			txs
 .e003	20 75 b1	jsr $b175			jsr 	SIOInitialise 				; initialise the I/O system.
-.e006	a2 26		ldx #$26			ldx 	#BootMsg1 & 255 			; boot text.
+.e006	a2 36		ldx #$36			ldx 	#BootMsg1 & 255 			; boot text.
 .e008	a0 e0		ldy #$e0			ldy 	#BootMsg1 >> 8
 .e00a	20 84 b1	jsr $b184			jsr 	SIOPrintString
-.e00d	42		neg a				neg
-.e00e	42		neg a				neg
-.e00f	a9 a1		lda #$a1			lda 	#$A1
->e011	b2 c3 d4					.byte 	$B2,$C3,$D4
-.e014	20 4b e0	jsr $e04b			jsr 	CheckStatus
->e017	a1 b2 c3 d4 80					.byte 	$A1,$B2,$C3,$D4,$80
-.e01c	a2 3f		ldx #$3f			ldx 	#BootMsg2 & 255 			; boot text.
-.e01e	a0 e0		ldy #$e0			ldy 	#BootMsg2 >> 8
-.e020	20 84 b1	jsr $b184			jsr 	SIOPrintString
-.e023					Wait:
-.e023	4c 23 e0	jmp $e023			jmp		Wait
-.e026					BootMsg1:
->e026	2a 2a 2a 20 34 35 31 30				.text 	"*** 4510 UNIT TEST ***",13,13,0
->e02e	20 55 4e 49 54 20 54 45 53 54 20 2a 2a 2a 0d 0d
->e03e	00
-.e03f					BootMsg2:
->e03f	43 4f 4d 50 4c 45 54 45				.text 	"COMPLETE.",13,13,0
->e047	2e 0d 0d 00
-.e04b					CheckStatus:
-.e04b	85 30		sta $30				sta 	ac
-.e04d	86 31		stx $31				stx 	xc
-.e04f	84 32		sty $32				sty 	yc
-.e051	64 33		stz $33				stz 	zc
-.e053	08		php				php
-.e054	68		pla				pla
-.e055	29 c3		and #$c3			and 	#$C3 				; only interested in NV....ZC
-.e057	85 36		sta $36				sta 	sr
-.e059	fa		plx				plx
-.e05a	7a		ply				ply
-.e05b	86 34		stx $34				stx 	pcl
-.e05d	84 35		sty $35				sty 	pch
-.e05f	a0 01		ldy #$01			ldy 	#1
-.e061					_CheckReg:
-.e061	b9 2f 00	lda $002f,y			lda 	ac-1,y
-.e064	d1 34		cmp ($34),y			cmp 	(pcl),y
-.e066	d0 1c		bne $e084			bne 	ShowStatus
-.e068	c8		iny				iny
-.e069	c0 05		cpy #$05			cpy 	#5
-.e06b	d0 f4		bne $e061			bne 	_CheckReg
-.e06d	b1 34		lda ($34),y			lda 	(pcl),y
-.e06f	45 36		eor $36				eor 	sr
-.e071	29 c3		and #$c3			and 	#$C3
-.e073	d0 ec		bne $e061			bne 	_CheckReg
-.e075	ea		nop				nop
-.e076	a5 34		lda $34				lda 	pcl
-.e078	18		clc				clc
-.e079	69 05		adc #$05			adc 	#5
-.e07b	aa		tax				tax
-.e07c	a5 35		lda $35				lda 	pch
-.e07e	69 00		adc #$00			adc 	#0
-.e080	48		pha				pha
-.e081	da		phx				phx
-.e082	60		rts				rts
-.e083	60		rts				rts
-.e084					ShowStatus:
-.e084	a2 b3		ldx #$b3			ldx 	#RegMsg & 255
-.e086	a0 e0		ldy #$e0			ldy 	#RegMsg >> 8
-.e088	20 84 b1	jsr $b184			jsr 	SIOPrintString
-.e08b	a2 00		ldx #$00			ldx 	#0
-.e08d	b5 30		lda $30,x	_SSLoop:lda 	ac,x
-.e08f	20 09 b2	jsr $b209			jsr 	SIOPrintHex
-.e092	e8		inx				inx
-.e093	e0 07		cpx #$07			cpx 	#7
-.e095	d0 f6		bne $e08d			bne 	_SSLoop
-.e097	a9 20		lda #$20			lda 	#32
-.e099	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
-.e09c	a2 08		ldx #$08			ldx 	#8
-.e09e					_SSStatus:
-.e09e	a9 2e		lda #$2e			lda 	#'.'
-.e0a0	06 36		asl $36				asl 	sr
-.e0a2	90 02		bcc $e0a6			bcc 	_SSClear
-.e0a4	a9 2a		lda #$2a			lda 	#'*'
-.e0a6					_SSClear:
-.e0a6	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
-.e0a9	ca		dex				dex
-.e0aa	d0 f2		bne $e09e			bne 	_SSStatus
-.e0ac	a9 0d		lda #$0d			lda 	#13
-.e0ae	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
-.e0b1	80 fe		bra $e0b1	_SSHalt:bra 	_SSHalt
->e0b3	20 41 20 20 58 20 20 59		RegMsg:	.text 	" A  X  Y  Z  PC    S  NV----ZC",13,0
->e0bb	20 20 5a 20 20 50 43 20 20 20 20 53 20 20 4e 56
->e0cb	2d 2d 2d 2d 5a 43 0d 00
+.e00d	a2 80		ldx #$80			ldx 	#$80
+.e00f					_Copy:
+.e00f	bd 00 b0	lda $b000,x			lda 	$B000,x
+.e012	9d 00 80	sta $8000,x			sta 	$8000,x
+.e015	95 80		sta $80,x			sta 	$80,x
+.e017	ca		dex				dex
+.e018	10 f5		bpl $e00f			bpl 	_Copy
+.e01a	42		neg a				neg
+.e01b	42		neg a				neg
+.e01c	ee 00 80	inc $8000			inc 	$8000
+.e01f	42		neg a				neg
+.e020	42		neg a				neg
+.e021	ad f4 bf	lda $bff4			lda 	$BFF4
+.e024	20 5b e0	jsr $e05b			jsr 	CheckStatus
+>e027	cc dd ee ff ff					.byte 	$CC,$DD,$EE,$FF,$FF
+.e02c	a2 4f		ldx #$4f			ldx 	#BootMsg2 & 255 			; boot text.
+.e02e	a0 e0		ldy #$e0			ldy 	#BootMsg2 >> 8
+.e030	20 84 b1	jsr $b184			jsr 	SIOPrintString
+.e033					Wait:
+.e033	4c 33 e0	jmp $e033			jmp		Wait
+.e036					BootMsg1:
+>e036	2a 2a 2a 20 34 35 31 30				.text 	"*** 4510 UNIT TEST ***",13,13,0
+>e03e	20 55 4e 49 54 20 54 45 53 54 20 2a 2a 2a 0d 0d
+>e04e	00
+.e04f					BootMsg2:
+>e04f	43 4f 4d 50 4c 45 54 45				.text 	"COMPLETE.",13,13,0
+>e057	2e 0d 0d 00
+.e05b					CheckStatus:
+.e05b	85 30		sta $30				sta 	ac
+.e05d	86 31		stx $31				stx 	xc
+.e05f	84 32		sty $32				sty 	yc
+.e061	64 33		stz $33				stz 	zc
+.e063	08		php				php
+.e064	68		pla				pla
+.e065	29 c3		and #$c3			and 	#$C3 				; only interested in NV....ZC
+.e067	85 36		sta $36				sta 	sr
+.e069	fa		plx				plx
+.e06a	7a		ply				ply
+.e06b	86 34		stx $34				stx 	pcl
+.e06d	84 35		sty $35				sty 	pch
+.e06f	a0 01		ldy #$01			ldy 	#1
+.e071					_CheckReg:
+.e071	b9 2f 00	lda $002f,y			lda 	ac-1,y
+.e074	d1 34		cmp ($34),y			cmp 	(pcl),y
+.e076	d0 34		bne $e0ac			bne 	ShowStatus
+.e078	c8		iny				iny
+.e079	c0 05		cpy #$05			cpy 	#5
+.e07b	d0 f4		bne $e071			bne 	_CheckReg
+.e07d	b1 34		lda ($34),y			lda 	(pcl),y
+.e07f	c9 ff		cmp #$ff			cmp 	#$FF 				; $FF = ignore status.
+.e081	f0 06		beq $e089			beq 	_ExitCS
+.e083	45 36		eor $36				eor 	sr
+.e085	29 c3		and #$c3			and 	#$C3
+.e087	d0 e8		bne $e071			bne 	_CheckReg
+.e089					_ExitCS:
+.e089	a5 35		lda $35				lda 	pch
+.e08b	20 09 b2	jsr $b209			jsr 	SIOPrintHex
+.e08e	a5 34		lda $34				lda 	pcl
+.e090	20 09 b2	jsr $b209			jsr 	SIOPrintHex
+.e093	a9 0d		lda #$0d			lda 	#13
+.e095	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.e098	a5 34		lda $34				lda 	pcl
+.e09a	18		clc				clc
+.e09b	69 05		adc #$05			adc 	#5
+.e09d	aa		tax				tax
+.e09e	a5 35		lda $35				lda 	pch
+.e0a0	69 00		adc #$00			adc 	#0
+.e0a2	48		pha				pha
+.e0a3	da		phx				phx
+.e0a4	a9 00		lda #$00			lda 	#0
+.e0a6	aa		tax				tax
+.e0a7	a8		tay				tay
+.e0a8	4b		taz				taz
+.e0a9	18		clc				clc
+.e0aa	b8		clv				clv
+.e0ab	60		rts				rts
+.e0ac					ShowStatus:
+.e0ac	a2 db		ldx #$db			ldx 	#RegMsg & 255
+.e0ae	a0 e0		ldy #$e0			ldy 	#RegMsg >> 8
+.e0b0	20 84 b1	jsr $b184			jsr 	SIOPrintString
+.e0b3	a2 00		ldx #$00			ldx 	#0
+.e0b5	b5 30		lda $30,x	_SSLoop:lda 	ac,x
+.e0b7	20 09 b2	jsr $b209			jsr 	SIOPrintHex
+.e0ba	e8		inx				inx
+.e0bb	e0 07		cpx #$07			cpx 	#7
+.e0bd	d0 f6		bne $e0b5			bne 	_SSLoop
+.e0bf	a9 20		lda #$20			lda 	#32
+.e0c1	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.e0c4	a2 08		ldx #$08			ldx 	#8
+.e0c6					_SSStatus:
+.e0c6	a9 2e		lda #$2e			lda 	#'.'
+.e0c8	06 36		asl $36				asl 	sr
+.e0ca	90 02		bcc $e0ce			bcc 	_SSClear
+.e0cc	a9 2a		lda #$2a			lda 	#'*'
+.e0ce					_SSClear:
+.e0ce	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.e0d1	ca		dex				dex
+.e0d2	d0 f2		bne $e0c6			bne 	_SSStatus
+.e0d4	a9 0d		lda #$0d			lda 	#13
+.e0d6	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.e0d9	80 fe		bra $e0d9	_SSHalt:bra 	_SSHalt
+>e0db	20 41 20 20 58 20 20 59		RegMsg:	.text 	" A  X  Y  Z  PC    S  NV----ZC",13,0
+>e0e3	20 20 5a 20 20 50 43 20 20 20 20 53 20 20 4e 56
+>e0f3	2d 2d 2d 2d 5a 43 0d 00
 
 ;******  End of listing

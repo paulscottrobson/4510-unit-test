@@ -21,6 +21,11 @@ EXTZPWork = 4								; Zero Page work for Personality (4 bytes)
 IOCursorX = 8 								; Cursor position
 IOCursorY = 9
 
+		* = $BFF0
+		.byte 	$CC,$DD,$EE,$FF
+		.byte 	0,0,0,0
+		.byte 	$FF,$FF,$FF,$FF
+		
 ; ******************************************************************************
 ;
 ;					Load appropriate personality source in.
