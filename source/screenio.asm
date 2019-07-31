@@ -124,14 +124,19 @@ SIOLoadCursor:
 		sta 	zTemp1 						
 		lda 	#0
 		sta 	zTemp1+1
+
 		asl 	zTemp1						; x 10
 		rol 	zTemp1+1
+
 		asl 	zTemp1						; x 20
 		rol 	zTemp1+1
+
 		asl 	zTemp1						; x 40
 		rol 	zTemp1+1 					; 
+
 		asl 	zTemp1						; x 80
 		rol 	zTemp1+1 					; (CC)
+
 		lda 	zTemp1 						; add X
 		adc 	xCursor
 		tax

@@ -1,7 +1,7 @@
 
 ; 64tass Turbo Assembler Macro V1.54.1900 listing file
 ; 64tass -q --m4510 -D TARGET=1 -b -L rom.lst -o rom.bin unittest.asm
-; Wed Jul 31 10:05:54 2019
+; Wed Jul 31 14:56:45 2019
 
 ;Offset	;Hex		;Monitor	;Source
 
@@ -11,17 +11,24 @@
 
 ;******  Processing input file: unittest.asm
 
-=$10					zTemp1 	= $10
-=$14					zTemp2 	= $14
-=$16					xCursor = $16
-=$17					yCursor = $17
+=$20					zTemp1 	= $20
+=$24					zTemp2 	= $24
+=$26					xCursor = $26
+=$27					yCursor = $27
+=$30					ac = $30
+=$31					xc = $31
+=$32					yc = $32
+=$33					zc = $33
+=$34					pcl = $34
+=$35					pch = $35
+=$36					sr = $36
 
 ;******  Processing file: porting.asm
 
 .fff8					EXTDummyInterrupt:
 .fff8	40		rti				rti
 >fffa	f8 ff						.word 	EXTDummyInterrupt
->fffc	b7 e0						.word 	Start
+>fffc	00 e0						.word 	Start
 >fffe	f8 ff						.word 	EXTDummyInterrupt
 =4					EXTZPWork = 4								; Zero Page work for Personality (4 bytes)
 =8					IOCursorX = 8 								; Cursor position
@@ -304,7 +311,7 @@
 .b002	9a		txs			txs
 .b003	20 d6 b0	jsr $b0d6		jsr 	EXTReset 						; reset video
 .b006	20 86 b0	jsr $b086		jsr 	EXTClearScreen 					; clear screen
-.b009	4c b7 e0	jmp $e0b7		jmp 	Start 							; start main application
+.b009	4c 00 e0	jmp $e000		jmp 	Start 							; start main application
 .b00c					EXTReadKeyPort:
 .b00c	db		phz			phz
 .b00d	20 42 b0	jsr $b042		jsr 	EXTSetupKeyAddress
@@ -540,139 +547,215 @@
 
 ;******  Processing file: screenio.asm
 
-.e000					SIOInitialise:
-.e000	20 d6 b0	jsr $b0d6			jsr 	EXTReset 					; reset video
-.e003					SIOClearScreen:
-.e003	20 86 b0	jsr $b086			jsr 	EXTClearScreen 				; clear screen
-.e006					SIOHomeCursor:
-.e006	48		pha				pha 								; home cursor
-.e007	a9 00		lda #$00			lda 	#0
-.e009	85 16		sta $16				sta 	xCursor
-.e00b	85 17		sta $17				sta 	yCursor
-.e00d	68		pla				pla
-.e00e	60		rts				rts
-.e00f					SIOPrintString:
-.e00f	48		pha				pha 								; save registers
-.e010	da		phx				phx
-.e011	5a		phy				phy
-.e012	86 14		stx $14				stx 	zTemp2 						; set up indirect pointer
-.e014	84 15		sty $15				sty 	zTemp2+1
-.e016	a0 00		ldy #$00			ldy 	#0
-.e018					_SIOPSLoop:
-.e018	b1 14		lda ($14),y			lda 	(zTemp2),y 					; read next, exit if 0
-.e01a	f0 06		beq $e022			beq 	_SIOPSExit
-.e01c	20 26 e0	jsr $e026			jsr 	SIOPrintCharacter 			; print and bump
-.e01f	c8		iny				iny
-.e020	d0 f6		bne $e018			bne 	_SIOPSLoop
-.e022					_SIOPSExit:
-.e022	7a		ply				ply 								; restore and exit.
-.e023	fa		plx				plx
-.e024	68		pla				pla
-.e025	60		rts				rts
-.e026					SIOPrintCharacter:
-.e026	48		pha				pha 								; save AXY
-.e027	da		phx				phx
-.e028	5a		phy				phy
-.e029	c9 0d		cmp #$0d			cmp 	#13 						; CR ?
-.e02b	f0 14		beq $e041			beq 	_SIOPReturn
-.e02d	c9 09		cmp #$09			cmp 	#9
-.e02f	f0 25		beq $e056			beq 	_SIOPTab
-.e031	20 6b e0	jsr $e06b			jsr 	SIOLoadCursor 				; load cursor position in.
-.e034	29 3f		and #$3f			and 	#$3F 						; PETSCII conversion
-.e036	20 7a b0	jsr $b07a			jsr 	EXTWriteScreen 				; write character out.
-.e039	e6 16		inc $16				inc 	xCursor 					; move right
-.e03b	a5 16		lda $16				lda 	xCursor 					; reached the RHS
-.e03d	c9 50		cmp #$50			cmp 	#EXTWidth
-.e03f	90 11		bcc $e052			bcc 	_SIOPExit
-.e041					_SIOPReturn:
-.e041	a9 00		lda #$00			lda 	#0 							; zero x
-.e043	85 16		sta $16				sta 	xCursor
-.e045	e6 17		inc $17				inc 	yCursor 					; go down
-.e047	a5 17		lda $17				lda 	yCursor
-.e049	c9 19		cmp #$19			cmp 	#EXTHeight 					; off the bottom ?
-.e04b	90 05		bcc $e052			bcc 	_SIOPExit
-.e04d	20 a4 b0	jsr $b0a4			jsr 	EXTScrollDisplay 			; scroll display up
-.e050	c6 17		dec $17				dec 	yCursor 					; cursor on bottom line.
-.e052					_SIOPExit:
-.e052	7a		ply				ply 								; restore and exit.
-.e053	fa		plx				plx
-.e054	68		pla				pla
-.e055	60		rts				rts
-.e056					_SIOPTab:
-.e056	a9 20		lda #$20			lda 	#32 						; tab.
-.e058	20 26 e0	jsr $e026			jsr 	SIOPrintCharacter
-.e05b	a5 16		lda $16				lda 	xCursor
-.e05d	29 07		and #$07			and 	#7
-.e05f	d0 f5		bne $e056			bne 	_SIOPTab
-.e061	80 ef		bra $e052			bra 	_SIOPExit
-.e063					SIOGetKey:
-.e063	20 0c b0	jsr $b00c			jsr 	EXTReadKeyPort 				; wait for a key
-.e066	f0 fb		beq $e063			beq 	SIOGetKey
-.e068	4c 35 b0	jmp $b035			jmp 	EXTRemoveKeyPressed 		; remove from the queue.
-.e06b					SIOLoadCursor:
-.e06b	48		pha				pha
-.e06c	a5 17		lda $17				lda 	yCursor  					; Y Position
-.e06e	0a		asl a				asl 	a 							; x 2 	(80)
-.e06f	0a		asl a				asl 	a 							; x 2 	(160)
-.e070	65 17		adc $17				adc 	yCursor 					; x 5 	(200) (CC)
-.e072	85 10		sta $10				sta 	zTemp1
-.e074	a9 00		lda #$00			lda 	#0
-.e076	85 11		sta $11				sta 	zTemp1+1
-.e078	06 10		asl $10				asl 	zTemp1						; x 10
-.e07a	26 11		rol $11				rol 	zTemp1+1
-.e07c	06 10		asl $10				asl 	zTemp1						; x 20
-.e07e	26 11		rol $11				rol 	zTemp1+1
-.e080	06 10		asl $10				asl 	zTemp1						; x 40
-.e082	26 11		rol $11				rol 	zTemp1+1 					;
-.e084	06 10		asl $10				asl 	zTemp1						; x 80
-.e086	26 11		rol $11				rol 	zTemp1+1 					; (CC)
-.e088	a5 10		lda $10				lda 	zTemp1 						; add X
-.e08a	65 16		adc $16				adc 	xCursor
-.e08c	aa		tax				tax
-.e08d	a5 11		lda $11				lda 	zTemp1+1
-.e08f	69 00		adc #$00			adc 	#0
-.e091	a8		tay				tay
-.e092	68		pla				pla 								; restore and exit
-.e093	60		rts				rts
-.e094					SIOPrintHex:
-.e094	48		pha				pha
-.e095	48		pha				pha
-.e096	a9 20		lda #$20			lda 	#32
-.e098	20 26 e0	jsr $e026			jsr 	SIOPrintCharacter
-.e09b	68		pla				pla
-.e09c	48		pha				pha
-.e09d	4a		lsr a				lsr 	a
-.e09e	4a		lsr a				lsr 	a
-.e09f	4a		lsr a				lsr 	a
-.e0a0	4a		lsr a				lsr 	a
-.e0a1	20 aa e0	jsr $e0aa			jsr 	_SIOPHex
-.e0a4	68		pla				pla
-.e0a5	20 aa e0	jsr $e0aa			jsr 	_SIOPHex
-.e0a8	68		pla				pla
-.e0a9	60		rts				rts
-.e0aa					_SIOPHex:
-.e0aa	29 0f		and #$0f			and 	#15
-.e0ac	c9 0a		cmp #$0a			cmp 	#10
-.e0ae	90 02		bcc $e0b2			bcc 	_SIOPHex2
-.e0b0	69 06		adc #$06			adc 	#6
-.e0b2					_SIOPHex2:
-.e0b2	69 30		adc #$30			adc 	#48
-.e0b4	4c 26 e0	jmp $e026			jmp 	SIOPrintCharacter
+.b175					SIOInitialise:
+.b175	20 d6 b0	jsr $b0d6			jsr 	EXTReset 					; reset video
+.b178					SIOClearScreen:
+.b178	20 86 b0	jsr $b086			jsr 	EXTClearScreen 				; clear screen
+.b17b					SIOHomeCursor:
+.b17b	48		pha				pha 								; home cursor
+.b17c	a9 00		lda #$00			lda 	#0
+.b17e	85 26		sta $26				sta 	xCursor
+.b180	85 27		sta $27				sta 	yCursor
+.b182	68		pla				pla
+.b183	60		rts				rts
+.b184					SIOPrintString:
+.b184	48		pha				pha 								; save registers
+.b185	da		phx				phx
+.b186	5a		phy				phy
+.b187	86 24		stx $24				stx 	zTemp2 						; set up indirect pointer
+.b189	84 25		sty $25				sty 	zTemp2+1
+.b18b	a0 00		ldy #$00			ldy 	#0
+.b18d					_SIOPSLoop:
+.b18d	b1 24		lda ($24),y			lda 	(zTemp2),y 					; read next, exit if 0
+.b18f	f0 06		beq $b197			beq 	_SIOPSExit
+.b191	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter 			; print and bump
+.b194	c8		iny				iny
+.b195	d0 f6		bne $b18d			bne 	_SIOPSLoop
+.b197					_SIOPSExit:
+.b197	7a		ply				ply 								; restore and exit.
+.b198	fa		plx				plx
+.b199	68		pla				pla
+.b19a	60		rts				rts
+.b19b					SIOPrintCharacter:
+.b19b	48		pha				pha 								; save AXY
+.b19c	da		phx				phx
+.b19d	5a		phy				phy
+.b19e	c9 0d		cmp #$0d			cmp 	#13 						; CR ?
+.b1a0	f0 14		beq $b1b6			beq 	_SIOPReturn
+.b1a2	c9 09		cmp #$09			cmp 	#9
+.b1a4	f0 25		beq $b1cb			beq 	_SIOPTab
+.b1a6	20 e0 b1	jsr $b1e0			jsr 	SIOLoadCursor 				; load cursor position in.
+.b1a9	29 3f		and #$3f			and 	#$3F 						; PETSCII conversion
+.b1ab	20 7a b0	jsr $b07a			jsr 	EXTWriteScreen 				; write character out.
+.b1ae	e6 26		inc $26				inc 	xCursor 					; move right
+.b1b0	a5 26		lda $26				lda 	xCursor 					; reached the RHS
+.b1b2	c9 50		cmp #$50			cmp 	#EXTWidth
+.b1b4	90 11		bcc $b1c7			bcc 	_SIOPExit
+.b1b6					_SIOPReturn:
+.b1b6	a9 00		lda #$00			lda 	#0 							; zero x
+.b1b8	85 26		sta $26				sta 	xCursor
+.b1ba	e6 27		inc $27				inc 	yCursor 					; go down
+.b1bc	a5 27		lda $27				lda 	yCursor
+.b1be	c9 19		cmp #$19			cmp 	#EXTHeight 					; off the bottom ?
+.b1c0	90 05		bcc $b1c7			bcc 	_SIOPExit
+.b1c2	20 a4 b0	jsr $b0a4			jsr 	EXTScrollDisplay 			; scroll display up
+.b1c5	c6 27		dec $27				dec 	yCursor 					; cursor on bottom line.
+.b1c7					_SIOPExit:
+.b1c7	7a		ply				ply 								; restore and exit.
+.b1c8	fa		plx				plx
+.b1c9	68		pla				pla
+.b1ca	60		rts				rts
+.b1cb					_SIOPTab:
+.b1cb	a9 20		lda #$20			lda 	#32 						; tab.
+.b1cd	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.b1d0	a5 26		lda $26				lda 	xCursor
+.b1d2	29 07		and #$07			and 	#7
+.b1d4	d0 f5		bne $b1cb			bne 	_SIOPTab
+.b1d6	80 ef		bra $b1c7			bra 	_SIOPExit
+.b1d8					SIOGetKey:
+.b1d8	20 0c b0	jsr $b00c			jsr 	EXTReadKeyPort 				; wait for a key
+.b1db	f0 fb		beq $b1d8			beq 	SIOGetKey
+.b1dd	4c 35 b0	jmp $b035			jmp 	EXTRemoveKeyPressed 		; remove from the queue.
+.b1e0					SIOLoadCursor:
+.b1e0	48		pha				pha
+.b1e1	a5 27		lda $27				lda 	yCursor  					; Y Position
+.b1e3	0a		asl a				asl 	a 							; x 2 	(80)
+.b1e4	0a		asl a				asl 	a 							; x 2 	(160)
+.b1e5	65 27		adc $27				adc 	yCursor 					; x 5 	(200) (CC)
+.b1e7	85 20		sta $20				sta 	zTemp1
+.b1e9	a9 00		lda #$00			lda 	#0
+.b1eb	85 21		sta $21				sta 	zTemp1+1
+.b1ed	06 20		asl $20				asl 	zTemp1						; x 10
+.b1ef	26 21		rol $21				rol 	zTemp1+1
+.b1f1	06 20		asl $20				asl 	zTemp1						; x 20
+.b1f3	26 21		rol $21				rol 	zTemp1+1
+.b1f5	06 20		asl $20				asl 	zTemp1						; x 40
+.b1f7	26 21		rol $21				rol 	zTemp1+1 					;
+.b1f9	06 20		asl $20				asl 	zTemp1						; x 80
+.b1fb	26 21		rol $21				rol 	zTemp1+1 					; (CC)
+.b1fd	a5 20		lda $20				lda 	zTemp1 						; add X
+.b1ff	65 26		adc $26				adc 	xCursor
+.b201	aa		tax				tax
+.b202	a5 21		lda $21				lda 	zTemp1+1
+.b204	69 00		adc #$00			adc 	#0
+.b206	a8		tay				tay
+.b207	68		pla				pla 								; restore and exit
+.b208	60		rts				rts
+.b209					SIOPrintHex:
+.b209	48		pha				pha
+.b20a	48		pha				pha
+.b20b	a9 20		lda #$20			lda 	#32
+.b20d	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.b210	68		pla				pla
+.b211	48		pha				pha
+.b212	4a		lsr a				lsr 	a
+.b213	4a		lsr a				lsr 	a
+.b214	4a		lsr a				lsr 	a
+.b215	4a		lsr a				lsr 	a
+.b216	20 1f b2	jsr $b21f			jsr 	_SIOPHex
+.b219	68		pla				pla
+.b21a	20 1f b2	jsr $b21f			jsr 	_SIOPHex
+.b21d	68		pla				pla
+.b21e	60		rts				rts
+.b21f					_SIOPHex:
+.b21f	29 0f		and #$0f			and 	#15
+.b221	c9 0a		cmp #$0a			cmp 	#10
+.b223	90 02		bcc $b227			bcc 	_SIOPHex2
+.b225	69 06		adc #$06			adc 	#6
+.b227					_SIOPHex2:
+.b227	69 30		adc #$30			adc 	#48
+.b229	4c 9b b1	jmp $b19b			jmp 	SIOPrintCharacter
 
 ;******  Return to file: unittest.asm
 
-.e0b7					Start:
-.e0b7	a2 ff		ldx #$ff		ldx 	#$FF 							; reset 6502 stack.
-.e0b9	9a		txs			txs
-.e0ba	20 00 e0	jsr $e000			jsr 	SIOInitialise 				; initialise the I/O system.
-.e0bd	a2 c7		ldx #$c7			ldx 	#BootMsg1 & 255 			; boot text.
-.e0bf	a0 e0		ldy #$e0			ldy 	#BootMsg1 >> 8
-.e0c1	20 0f e0	jsr $e00f			jsr 	SIOPrintString
-.e0c4					Wait:
-.e0c4	4c c4 e0	jmp $e0c4			jmp		Wait
-.e0c7					BootMsg1:
->e0c7	2a 2a 2a 20 34 35 31 30				.text 	"*** 4510 UNIT TEST ***",13,13,0
->e0cf	20 55 4e 49 54 20 54 45 53 54 20 2a 2a 2a 0d 0d
->e0df	00
+.e000					Start:
+.e000	a2 ff		ldx #$ff		ldx 	#$FF 							; reset 6502 stack.
+.e002	9a		txs			txs
+.e003	20 75 b1	jsr $b175			jsr 	SIOInitialise 				; initialise the I/O system.
+.e006	a2 26		ldx #$26			ldx 	#BootMsg1 & 255 			; boot text.
+.e008	a0 e0		ldy #$e0			ldy 	#BootMsg1 >> 8
+.e00a	20 84 b1	jsr $b184			jsr 	SIOPrintString
+.e00d	42		neg a				neg
+.e00e	42		neg a				neg
+.e00f	a9 a1		lda #$a1			lda 	#$A1
+>e011	b2 c3 d4					.byte 	$B2,$C3,$D4
+.e014	20 4b e0	jsr $e04b			jsr 	CheckStatus
+>e017	a1 b2 c3 d4 80					.byte 	$A1,$B2,$C3,$D4,$80
+.e01c	a2 3f		ldx #$3f			ldx 	#BootMsg2 & 255 			; boot text.
+.e01e	a0 e0		ldy #$e0			ldy 	#BootMsg2 >> 8
+.e020	20 84 b1	jsr $b184			jsr 	SIOPrintString
+.e023					Wait:
+.e023	4c 23 e0	jmp $e023			jmp		Wait
+.e026					BootMsg1:
+>e026	2a 2a 2a 20 34 35 31 30				.text 	"*** 4510 UNIT TEST ***",13,13,0
+>e02e	20 55 4e 49 54 20 54 45 53 54 20 2a 2a 2a 0d 0d
+>e03e	00
+.e03f					BootMsg2:
+>e03f	43 4f 4d 50 4c 45 54 45				.text 	"COMPLETE.",13,13,0
+>e047	2e 0d 0d 00
+.e04b					CheckStatus:
+.e04b	85 30		sta $30				sta 	ac
+.e04d	86 31		stx $31				stx 	xc
+.e04f	84 32		sty $32				sty 	yc
+.e051	64 33		stz $33				stz 	zc
+.e053	08		php				php
+.e054	68		pla				pla
+.e055	29 c3		and #$c3			and 	#$C3 				; only interested in NV....ZC
+.e057	85 36		sta $36				sta 	sr
+.e059	fa		plx				plx
+.e05a	7a		ply				ply
+.e05b	86 34		stx $34				stx 	pcl
+.e05d	84 35		sty $35				sty 	pch
+.e05f	a0 01		ldy #$01			ldy 	#1
+.e061					_CheckReg:
+.e061	b9 2f 00	lda $002f,y			lda 	ac-1,y
+.e064	d1 34		cmp ($34),y			cmp 	(pcl),y
+.e066	d0 1c		bne $e084			bne 	ShowStatus
+.e068	c8		iny				iny
+.e069	c0 05		cpy #$05			cpy 	#5
+.e06b	d0 f4		bne $e061			bne 	_CheckReg
+.e06d	b1 34		lda ($34),y			lda 	(pcl),y
+.e06f	45 36		eor $36				eor 	sr
+.e071	29 c3		and #$c3			and 	#$C3
+.e073	d0 ec		bne $e061			bne 	_CheckReg
+.e075	ea		nop				nop
+.e076	a5 34		lda $34				lda 	pcl
+.e078	18		clc				clc
+.e079	69 05		adc #$05			adc 	#5
+.e07b	aa		tax				tax
+.e07c	a5 35		lda $35				lda 	pch
+.e07e	69 00		adc #$00			adc 	#0
+.e080	48		pha				pha
+.e081	da		phx				phx
+.e082	60		rts				rts
+.e083	60		rts				rts
+.e084					ShowStatus:
+.e084	a2 b3		ldx #$b3			ldx 	#RegMsg & 255
+.e086	a0 e0		ldy #$e0			ldy 	#RegMsg >> 8
+.e088	20 84 b1	jsr $b184			jsr 	SIOPrintString
+.e08b	a2 00		ldx #$00			ldx 	#0
+.e08d	b5 30		lda $30,x	_SSLoop:lda 	ac,x
+.e08f	20 09 b2	jsr $b209			jsr 	SIOPrintHex
+.e092	e8		inx				inx
+.e093	e0 07		cpx #$07			cpx 	#7
+.e095	d0 f6		bne $e08d			bne 	_SSLoop
+.e097	a9 20		lda #$20			lda 	#32
+.e099	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.e09c	a2 08		ldx #$08			ldx 	#8
+.e09e					_SSStatus:
+.e09e	a9 2e		lda #$2e			lda 	#'.'
+.e0a0	06 36		asl $36				asl 	sr
+.e0a2	90 02		bcc $e0a6			bcc 	_SSClear
+.e0a4	a9 2a		lda #$2a			lda 	#'*'
+.e0a6					_SSClear:
+.e0a6	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.e0a9	ca		dex				dex
+.e0aa	d0 f2		bne $e09e			bne 	_SSStatus
+.e0ac	a9 0d		lda #$0d			lda 	#13
+.e0ae	20 9b b1	jsr $b19b			jsr 	SIOPrintCharacter
+.e0b1	80 fe		bra $e0b1	_SSHalt:bra 	_SSHalt
+>e0b3	20 41 20 20 58 20 20 59		RegMsg:	.text 	" A  X  Y  Z  PC    S  NV----ZC",13,0
+>e0bb	20 20 5a 20 20 50 43 20 20 20 20 53 20 20 4e 56
+>e0cb	2d 2d 2d 2d 5a 43 0d 00
 
 ;******  End of listing
