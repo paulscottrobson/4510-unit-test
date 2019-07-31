@@ -9,12 +9,12 @@
 ; *******************************************************************************************
 ; *******************************************************************************************
 
-zTemp1 	= $20
+zTemp1 	= $20 								; used in the I/O stuff nicked from AtomicBasic
 zTemp2 	= $24
 xCursor = $26
 yCursor = $27	
 
-ac = $30
+ac = $30 									; Registers stored here.
 xc = $31
 yc = $32
 zc = $33
@@ -34,9 +34,9 @@ Start:
 		ldy 	#BootMsg1 >> 8
 		jsr 	SIOPrintString
 
-		ldx 	#$80
-_Copy:		
-		lda 	$B000,x
+		ldx 	#$80 						; copy ROM at $B000 which should be
+_Copy:		 								; stable from build to build (!)
+		lda 	$B000,x 					; to $80 and $8000
 		sta 	$8000,x
 		sta 	$80,x
 		dex
@@ -51,8 +51,8 @@ _Copy:
 		lda 	$BFF4
 
 		
-		jsr 	CheckStatus
-		.byte 	$CC,$DD,$EE,$FF,$FF
+		jsr 	CheckStatus 				; check status
+		.byte 	$CC,$DD,$EE,$FF,$FF 		; what we should see. A X Y Z S (S = $FF = ignore)
 
 		ldx 	#BootMsg2 & 255 			; boot text.
 		ldy 	#BootMsg2 >> 8
@@ -72,17 +72,17 @@ BootMsg2:
 ; *******************************************************************************************
 
 CheckStatus:
-		sta 	ac
+		sta 	ac 							; save AXYZ
 		stx 	xc
 		sty 	yc
 		.if TARGET=1
 		stz 	zc
 		.endif
-		php 	
+		php 	 							; save PSW
 		pla
-		and 	#$C3 				; only interested in NV....ZC
+		and 	#$C3 						; only interested in NV....ZC
 		sta 	sr
-		plx
+		plx 								; save return - 1
 		ply
 		stx 	pcl
 		sty 	pch
@@ -96,20 +96,20 @@ _CheckReg:
 		cpy 	#5
 		bne 	_CheckReg
 		lda 	(pcl),y
-		cmp 	#$FF 				; $FF = ignore status.
+		cmp 	#$FF 						; $FF = ignore status.
 		beq 	_ExitCS
-		eor 	sr
-		and 	#$C3
+		eor 	sr 							; zero bits are the same
+		and 	#$C3 						; only into NV....ZC
 		bne 	_CheckReg
 		;
 _ExitCS:
-		lda 	pch
+		lda 	pch 						; okay, so print out PCHL
 		jsr 	SIOPrintHex
 		lda 	pcl
 		jsr 	SIOPrintHex
 		lda 	#13
 		jsr 	SIOPrintCharacter
-		lda 	pcl
+		lda 	pcl 						; skip over the comparing values
 		clc
 		adc 	#5
 		tax
@@ -118,8 +118,8 @@ _ExitCS:
 		pha
 		phx
 
-		lda 	#0
-		tax
+		lda 	#0 							; zero everything, clear overflow and carry
+		tax 								; for next go.
 		tay
 		.if TARGET=1
 		taz
@@ -135,10 +135,10 @@ _ExitCS:
 ; *******************************************************************************************
 
 ShowStatus:
-		ldx 	#RegMsg & 255
+		ldx 	#RegMsg & 255 				; print the line
 		ldy 	#RegMsg >> 8
 		jsr 	SIOPrintString
-		ldx 	#0
+		ldx 	#0 							; print regs
 _SSLoop:lda 	ac,x
 		jsr 	SIOPrintHex
 		inx
@@ -146,7 +146,7 @@ _SSLoop:lda 	ac,x
 		bne 	_SSLoop
 		lda 	#32
 		jsr 	SIOPrintCharacter
-		ldx 	#8
+		ldx 	#8 							; print PSW
 _SSStatus:		
 		lda 	#'.'
 		asl 	sr
@@ -161,3 +161,4 @@ _SSClear:
 _SSHalt:bra 	_SSHalt		
 
 RegMsg:	.text 	" A  X  Y  Z  PC    S  NV----ZC",13,0
+
