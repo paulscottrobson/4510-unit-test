@@ -1,0 +1,10 @@
+Notes
+=====
+
+In the source directory, you'll need the latest bitstream and kickstart file, or fix it to
+point to them.
+
+sh cexec.sh 	Runs it on the 65C02 emulator, which won't work, that was for dev.
+sh mexec.sh		Runs it on LGB's Xemu emulator
+sh fexec.sh 	Runs it on a Digilent NexSys A7
+
